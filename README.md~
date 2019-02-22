@@ -43,54 +43,43 @@ Output:
 
 
 #######################################
-# Arg_parser.sh by Jeffery Vahrenkamp #
+# arg_parser.sh by Jeffery Vahrenkamp #
 #######################################
 
 Usage:
 
-Include "source FILE_LOCATION/arg_parser.sh" at the top of the script
-the "get_flags" function is used to define flags to be parsed by script
+        Include "source ~u6004424/bin/arg_parser.sh" at the top of the script
+        the "get_flags" function is used to define flags to be parsed by script
 
-Defining Flags:
-	-Anything before a flag will be saved under the variable "\$unflagged"
-	-Mandatory flags use the format variable=flag	
-		Example: Mandatory_argument=-m
-	-Optional flags use the format variable~flag:default  
-		Example: Optional_argument~-o:default_value
-	-;; in default values will be converted to space.
-       		Example: Optional~-o:val1;;val2;;val3 will become \$Optional=val1 val2 val3	
+        Defining Flags:
+                -Anything before a flag will be saved under the variable $unflagged
+                -Mandatory flags use the format variable=flag  example: Mandatory_argument=-m
+                -Optional flags use the format variable~flag  example: Optional_argument~-o
 
-Help Messages:
-	-If a usage message is desired to be printed when mandatory flags are
-		not present create a function called usage which echos your message
-	-Usage function must be defined before get_flags function call!
-		\033[4m\033[32;1m-NOTE:The -h flag is reserved for calling the usage function without error messages!\033[0m
+        Help Messages:
+                -If a usage message is desired to be printed when mandatory flags are
+                    not present create a function called usage which echos your message
+                -Usage function must be defined before get_flags function call!
+                -NOTE:The -h flag is reserved for calling the usage function without error messages!
 
 Example.sh script:
-       source FILE_LOCATION/arg_parser.sh
+       source ~u6004424/bin/arg_parser.sh
 
        usage () {
-               cat << help_message
-put your usage message here
-formatting will be preserved
-
-help_message
+               echo -e "this is a usage or help message"
        }
 
-       get_flags optional~-o optional_default~-d:MyOption optional_nodefault~-n mandatory=-m 
+       get_flags optional~-o mandatory=-m
 
-       echo optional=\$optional
-       echo optional_default=\$optional_default
-       echo optional_nodefault=\$optional_nodefault
-       echo mandatory=\$mandatory
-       echo unflagged=\$unflagged
+       echo optional=$optional
+       echo mandatory=$mandatory
+       echo unflagged=$unflagged
 
 ---------------------------------------------
-\$:bash Example.sh no_flag -o optional1 option2 -m this_is_mandatory
-Output:
-	optional=optional1 option2
-	optional_default=MyOption
-	optional_nodefault=
-	mandatory=this_is_mandatory
-	unflagged=no_flag
+$:bash Example.sh no_flag -o optional1 option2 -m this_is_mandatory
 
+Output:
+        optional=optional1 option2
+        mandatory=this_is_mandatory
+        unflagged=no_flag
+```
