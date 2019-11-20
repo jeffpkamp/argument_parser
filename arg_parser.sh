@@ -1,5 +1,30 @@
 #!/bin/bash
 
+awk -W version 2>/dev/null | awk '{
+	for (x=1;x<=NF;x++) 
+		if(tolower($x)~"awk"){
+			split($(x+1),ver,".")
+			#print "\n\nAwk Version: "$x,ver[1]"."ver[2] > "/dev/stderr"
+			if (tolower($x)~"mawk") {
+				errorMessage=errorMessage"\n\n### WARNING ###\nmawk not compatible with Arg_parsers.sh"
+				err+=1
+			}
+			if (ver[1] < 3) {
+				err+=1
+				errorMessage=errorMessage"\n\n### WARNING ###\nAwk version < 3 are not compatible with Arg_parser.sh" 
+			}
+			if (err) {
+				print "\n### ERROR ###\nAWK version Errors!"errorMessage,err"\n\n" > "/dev/stderr"
+				exit 127
+			}
+			else{
+				exit 
+			}
+		}
+}'
+
+[[ $? > 0 ]] && exit
+
 help_message () {
 cat <<message
 
@@ -14,12 +39,24 @@ the "get_flags" function is used to define flags to be parsed by script
 
 Defining Flags:
 	-Anything before a flag will be saved under the variable "\$unflagged"
+
 	-Mandatory flags use the format variable=flag	
-		Example: Mandatory_argument=-m
+		- Example: Mandatory_argument=-m
+
+	-Boolian flags use the format vaiable?flag
+		- Example: Boolian_argument?-b
+		- If -b is in the program aruments, its variable is set to 1
+
 	-Optional flags use the format variable~flag:default  
-		Example: Optional_argument~-o:default_value
-	-;; in default values will be converted to space.
-       		Example: Optional~-o:val1;;val2;;val3 will become \$Optional=val1 val2 val3	
+		- Example: Optional_argument~-o:default_value
+		- ;; in default values will be converted to space.
+       		- Example: Optional~-o:val1;;val2;;val3 will become \$Optional=val1 val2 val3
+	
+	-To pass flags to end program add "pass_args" to get_flags
+		- Any flags and associated variables passed to the program that are not defined in 
+			get flags will be saved under the variable "\$passed_args" variable. 
+	
+
 
 Help Messages:
 	-If a usage message is desired to be printed when mandatory flags are
@@ -38,22 +75,28 @@ formatting will be preserved
 help_message
        }
 
-       get_flags optional~-o optional_default~-d:MyOption optional_nodefault~-n mandatory=-m 
+       get_flags pass_args optional~-o noboolian?-nb boolian?-b optional_default~-d:MyOption optional_nodefault~-n mandatory=-m 
 
        echo optional=\$optional
        echo optional_default=\$optional_default
        echo optional_nodefault=\$optional_nodefault
        echo mandatory=\$mandatory
        echo unflagged=\$unflagged
+	   echo boolian=\$boolian
+	   echo noboolian=\$noboolian
+       echo passed_args=\$passed_args
 
 ---------------------------------------------
-\$:bash Example.sh no_flag -o optional1 option2 -m this_is_mandatory
+\$:bash Example.sh no_flag -o optional1 option2 -m this_is_mandatory -b -z 1
 Output:
 	optional=optional1 option2
 	optional_default=MyOption
 	optional_nodefault=
 	mandatory=this_is_mandatory
 	unflagged=no_flag
+	boolian=1
+	noboolian=
+	passed_args=-z 1
 
 "
 message
@@ -61,17 +104,18 @@ message
 
 __args=$@
 
+
 [[ $__args == "" ]] && __args="-h"
 
 
 get_flags () {
 	eval $(echo $@ $__args | awk -v inargs="$__args" ' 
-		BEGIN{
-			flag["--unflagged"]
-			working="--unflagged"
-		}
-		{
-			for (x=1;x<=NF;x++) {
+	BEGIN{
+		flag["--unflagged"]
+		working="--unflagged"
+	}
+	{
+		for (x=1;x<=NF;x++) {
 			if ($x ~ "~") {
 				split($x,out,"[:~ ]")
 				optional_keys[out[1]]=out[2]
@@ -79,6 +123,13 @@ get_flags () {
 					gsub(";;"," ",out[3])
 					default_value[out[1]]=out[3]
 				}
+			}
+			else if ($x == "pass_args"){
+					pass_args=1
+			}
+			else if ($x ~ "?") {
+				split($x,out,"?")
+				boolian_keys[out[1]]=out[2]
 			}
 			else if ($x ~ "=") {
 				split($x,out,"=") 
@@ -94,7 +145,8 @@ get_flags () {
 	END{
 		quit=0
 		if ("-h" in flag) {
-			print "[[ $(type usage 2> /dev/null) =~ function ]] && usage || [[ -z $usage ]] || echo -e $usage; exit 1"
+			print "echo ;"
+			print "[[ $(type -t usage 2> /dev/null) =~ function ]] && usage || [[ ! $usage ]] || echo -e $usage; exit 1"
 			exit 0
 		}
 		for (x in mandatory_keys) {
@@ -107,22 +159,42 @@ get_flags () {
 			else {
 				sub("^ ","",flag[mandatory_keys[x]])
 				print x"=\""flag[mandatory_keys[x]]"\""
+				delete flag[mandatory_keys[x]]
 			}
 		}
 		if (quit > 0) {
-			print "[[ $(type usage 2> /dev/null) =~ function ]] && usage || [[ -z $usage ]] || echo -e $usage; exit 1"
+			print "echo ;"
+			print "[[ $(type -t usage 2> /dev/null) =~ function ]] && usage || [[ ! $usage ]] || echo -e $usage; exit 1"
 			exit 1
 		}
 		for (x in optional_keys) {
 			sub("^ ","",flag[optional_keys[x]])
-			if (length(flag[optional_keys[x]]) > 0 || inargs ~ optional_keys[x] ) 
+			if (length(flag[optional_keys[x]]) > 0 || inargs ~ "^"optional_keys[x] ){
 				print x"=\""flag[optional_keys[x]]"\""
-			else if ( !(inargs ~ optional_keys[x]) && (x in default_value)) 
-				print x"=\""default_value[x]"\""
+				delete flag[optional_keys[x]]
 			}
+			else if (x in default_value) {
+				print x"=\""default_value[x]"\""
+				delete flag[optional_keys[x]]
+			}
+		}
+		for (x in boolian_keys) {
+			if (boolian_keys[x] in flag)
+				print x"=1"
+				delete flag[boolian_keys[x]]
+		}
 		sub("^ ","",flag["--unflagged"])
-		if (length(flag[--unflagged])>0) print "unflagged=\""flag["--unflagged"]"\""
-	}')
+		if (length(flag["--unflagged"])>0) {
+			print "unflagged=\""flag["--unflagged"]"\""
+		}
+		delete flag["--unflagged"]
+		if (pass_args){
+			for (x in flag){
+				passed_args=passed_args" "x" "flag[x]
+			}
+			print "passed_args=\""passed_args"\""
+		}
+	}' || (echo -e "\n\nERROR:\narg_parsers get_flags failed\nChecking Awk version Information\n">/dev/stderr; awk -W version  1>/dev/stderr; echo -e "\n\n">/dev/stderr))
 }
 
 

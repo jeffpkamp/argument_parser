@@ -53,12 +53,24 @@ the "get_flags" function is used to define flags to be parsed by script
 
 Defining Flags:
 	-Anything before a flag will be saved under the variable "\$unflagged"
+
 	-Mandatory flags use the format variable=flag	
-		Example: Mandatory_argument=-m
+		- Example: Mandatory_argument=-m
+
+	-Boolian flags use the format vaiable?flag
+		- Example: Boolian_argument?-b
+		- If -b is in the program aruments, its variable is set to 1
+
 	-Optional flags use the format variable~flag:default  
-		Example: Optional_argument~-o:default_value
-	-;; in default values will be converted to space.
-       		Example: Optional~-o:val1;;val2;;val3 will become \$Optional=val1 val2 val3	
+		- Example: Optional_argument~-o:default_value
+		- ;; in default values will be converted to space.
+       		- Example: Optional~-o:val1;;val2;;val3 will become \$Optional=val1 val2 val3
+	
+	-To pass flags to end program add "pass_args" to get_flags
+		- Any flags and associated variables passed to the program that are not defined in 
+			get flags will be saved under the variable "\$passed_args" variable. 
+	
+
 
 Help Messages:
 	-If a usage message is desired to be printed when mandatory flags are
@@ -77,20 +89,26 @@ formatting will be preserved
 help_message
        }
 
-       get_flags optional~-o optional_default~-d:MyOption optional_nodefault~-n mandatory=-m 
+       get_flags pass_args optional~-o noboolian?-nb boolian?-b optional_default~-d:MyOption optional_nodefault~-n mandatory=-m 
 
        echo optional=\$optional
        echo optional_default=\$optional_default
        echo optional_nodefault=\$optional_nodefault
        echo mandatory=\$mandatory
        echo unflagged=\$unflagged
+	   echo boolian=\$boolian
+	   echo noboolian=\$noboolian
+       echo passed_args=\$passed_args
 
 ---------------------------------------------
-\$:bash Example.sh no_flag -o optional1 option2 -m this_is_mandatory
+\$:bash Example.sh no_flag -o optional1 option2 -m this_is_mandatory -b -z 1
 Output:
 	optional=optional1 option2
 	optional_default=MyOption
 	optional_nodefault=
 	mandatory=this_is_mandatory
 	unflagged=no_flag
+	boolian=1
+	noboolian=
+	passed_args=-z 1
 
