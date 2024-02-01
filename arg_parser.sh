@@ -1,30 +1,5 @@
 #!/bin/bash
 
-awk -W version 2>/dev/null | awk '{
-	for (x=1;x<=NF;x++) 
-		if(tolower($x)~"awk"){
-			split($(x+1),ver,".")
-			#print "\n\nAwk Version: "$x,ver[1]"."ver[2] > "/dev/stderr"
-			if (tolower($x)~"mawk") {
-				errorMessage=errorMessage"\n\n### WARNING ###\nmawk not compatible with Arg_parsers.sh"
-				err+=1
-			}
-			if (ver[1] < 3) {
-				err+=1
-				errorMessage=errorMessage"\n\n### WARNING ###\nAwk version < 3 are not compatible with Arg_parser.sh" 
-			}
-			if (err) {
-				print "\n### ERROR ###\nAWK version Errors!"errorMessage,err"\n\n" > "/dev/stderr"
-				exit 127
-			}
-			else{
-				exit 
-			}
-		}
-}'
-
-[[ $? > 0 ]] && exit
-
 help_message () {
 cat <<message
 
@@ -109,7 +84,7 @@ __args=$@
 
 
 get_flags () {
-	eval $(echo $@ $__args | awk -v inargs="$__args" ' 
+	eval "$(echo $@ $__args | awk -v inargs="$__args" ' 
 	BEGIN{
 		flag["--unflagged"]
 		working="--unflagged"
@@ -194,7 +169,7 @@ get_flags () {
 			}
 			print "passed_args=\""passed_args"\""
 		}
-	}' || (echo -e "\n\nERROR:\narg_parsers get_flags failed\nChecking Awk version Information\n">/dev/stderr; awk -W version  1>/dev/stderr; echo -e "\n\n">/dev/stderr))
+	}' || (echo -e "\n\nERROR:\narg_parsers get_flags failed\nChecking Awk version Information\n">/dev/stderr; awk -W version  1>/dev/stderr; echo -e "\n\n">/dev/stderr))"
 }
 
 
